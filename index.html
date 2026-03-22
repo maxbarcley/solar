@@ -100,6 +100,32 @@ const parkUpdates = [
     desc: "Parque Solar Aljarafe is now fully operational and producing energy for investor accounts." },
 ]
 
+const notifications = [
+  { emoji: "💰", title: "Payout received — €30.80", desc: "Your March dividend has been paid to your IBAN.", time: "2 days ago", read: false, color: "#34d399" },
+  { emoji: "🔧", title: "Panel cleaning completed",  desc: "All 2,400 panels cleaned. Expect +3–5% production.", time: "Mar 15", read: false, color: "#60a5fa" },
+  { emoji: "⚡", title: "1 GWh milestone reached",   desc: "Parque Solar Aljarafe hit its first gigawatt-hour.", time: "Feb 28", read: true,  color: "#f59e0b" },
+  { emoji: "⚠️", title: "Brief downtime — inverter 3B", desc: "Resolved in 6 hours. No payout impact.", time: "Jan 14", read: true,  color: "#f87171" },
+]
+
+const availableParks = [
+  { id: 3, name: "Extremadura Solar Hub", location: "Badajoz, Extremadura", cap: "3.8 MW",
+    panelPrice: 600, available: 240, irrTarget: "7.4%", online: "Q3 2026", status: "onboarding",
+    desc: "Largest park in the portfolio. Premium location with 2,100+ sunshine hours/year." },
+  { id: 4, name: "Solar Murcia Sud", location: "Murcia", cap: "1.6 MW",
+    panelPrice: 600, available: 8, irrTarget: "7.2%", online: "Active", status: "open",
+    desc: "High-irradiation park in Murcia. Only 8 panels remaining — almost fully subscribed." },
+]
+
+const parkEarnings = {
+  1: [
+    { m: "Sep", eur: 21.50 }, { m: "Oct", eur: 19.80 }, { m: "Nov", eur: 13.70 },
+    { m: "Dec", eur: 10.05 }, { m: "Jan", eur: 11.60 }, { m: "Feb", eur: 15.55 }, { m: "Mar", eur: 20.65 },
+  ],
+  2: [
+    { m: "Dec", eur: 4.95 }, { m: "Jan", eur: 5.70 }, { m: "Feb", eur: 7.65 }, { m: "Mar", eur: 10.15 },
+  ],
+}
+
 const myParks = [
   { id: 1, name: "Parque Solar Aljarafe", location: "Sevilla, Andalucía",
     kWp: 3.2, panels: 8, monthly: 18.4, yield: 7.2, irr: 847,
@@ -598,6 +624,87 @@ function ModuleIllustration({ panelNumber }) {
   )
 }
 
+// ─── Notifications Panel ──────────────────────────────────────────────────────
+
+function NotificationsPanel({ onClose }) {
+  const unread = notifications.filter(n => !n.read).length
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="bg-gray-950 rounded-t-3xl p-4 max-w-lg mx-auto w-full pb-8" onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-gray-700 rounded-full mx-auto mb-4" />
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-base font-bold">Notifications</h2>
+          {unread > 0 && <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">{unread} new</span>}
+        </div>
+        {notifications.map((n, i) => (
+          <div key={i} className={`flex gap-3 py-3 border-b border-gray-800/60 last:border-0 ${n.read ? "opacity-50" : ""}`}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm" style={{ background: n.color + "20" }}>
+              {n.emoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-sm font-medium leading-tight">{n.title}</p>
+                {!n.read && <span className="w-2 h-2 bg-amber-400 rounded-full flex-shrink-0 mt-1" />}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">{n.desc}</p>
+              <p className="text-xs text-gray-700 mt-1">{n.time}</p>
+            </div>
+          </div>
+        ))}
+        <button onClick={onClose} className="w-full mt-4 py-3 text-gray-400 text-sm border border-gray-800 rounded-2xl hover:bg-gray-900 transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Marketplace Sheet ────────────────────────────────────────────────────────
+
+function MarketplaceSheet({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="bg-gray-950 rounded-t-3xl p-4 max-w-lg mx-auto w-full pb-8"
+        style={{ maxHeight: "82vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        <div className="w-10 h-1 bg-gray-700 rounded-full mx-auto mb-4" />
+        <h2 className="text-base font-bold mb-0.5">Invest in a Park</h2>
+        <p className="text-xs text-gray-500 mb-4">€600 per panel · minimum 1 panel</p>
+        {availableParks.map((park, i) => (
+          <div key={i} className="bg-gray-900 rounded-2xl p-4 mb-3 border border-gray-800/60">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-semibold text-sm">{park.name}</p>
+                <p className="text-xs text-gray-500 flex items-center gap-0.5 mt-0.5"><MapPin size={9} />{park.location}</p>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${park.status === "open" ? "bg-green-900/40 text-green-400" : "bg-amber-900/40 text-amber-400"}`}>
+                {park.status === "open" ? "● Open" : "○ Pre-sale"}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mb-3 leading-relaxed">{park.desc}</p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[{ l: "Target yield", v: park.irrTarget }, { l: "Capacity", v: park.cap }, { l: "Online", v: park.online }].map(s => (
+                <div key={s.l} className="bg-gray-800/60 rounded-xl p-2">
+                  <p className="text-xs text-gray-500">{s.l}</p>
+                  <p className="text-xs font-semibold mt-0.5">{s.v}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-gray-500">{park.available} panels · €{park.panelPrice}/panel</p>
+              <button className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                Invest →
+              </button>
+            </div>
+          </div>
+        ))}
+        <button onClick={onClose} className="w-full py-3 text-gray-400 text-sm border border-gray-800 rounded-2xl hover:bg-gray-900 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Park Detail View ─────────────────────────────────────────────────────────
 
 function ParkDetailView({ park, onBack }) {
@@ -624,6 +731,24 @@ function ParkDetailView({ park, onBack }) {
             <p className="text-sm font-bold mt-0.5">{s.v}</p>
           </div>
         ))}
+      </div>
+
+      {/* Per-park earnings */}
+      <div className="bg-gray-900 rounded-2xl p-4 mb-5">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">📈 Your Earnings — This Park</p>
+        <ResponsiveContainer width="100%" height={100}>
+          <BarChart data={parkEarnings[park.id] || []} barCategoryGap="30%">
+            <XAxis dataKey="m" tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151", borderRadius: 8, color: "#f9fafb", fontSize: 11 }}
+              formatter={(v) => [`€${v.toFixed(2)}`, "Earned"]} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+            <Bar dataKey="eur" fill="#f59e0b" opacity={0.85} radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="text-xs text-gray-600 mt-1">
+          Total from this park: <span className="text-gray-400 font-medium">
+            €{((parkEarnings[park.id] || []).reduce((s, d) => s + d.eur, 0)).toFixed(2)}
+          </span>
+        </p>
       </div>
 
       {/* Webcam */}
@@ -696,12 +821,23 @@ function InvestorApp() {
 }
 
 function HomeTab() {
+  const [showNotifs, setShowNotifs] = useState(false)
+  const unread = notifications.filter(n => !n.read).length
   return (
+    <>
+    {showNotifs && <NotificationsPanel onClose={() => setShowNotifs(false)} />}
     <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       {/* Header */}
       <div className="flex justify-between items-center mb-5">
         <div><p className="text-gray-400 text-xs">Good morning,</p><h1 className="text-xl font-bold">Max</h1></div>
-        <div className="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center text-black font-bold text-sm">M</div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowNotifs(true)}
+            className="relative w-9 h-9 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:bg-gray-800 transition-colors">
+            <Bell size={15} className="text-gray-400" />
+            {unread > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full border border-gray-900" />}
+          </button>
+          <div className="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center text-black font-bold text-sm">M</div>
+        </div>
       </div>
 
       {/* Hero card */}
@@ -777,11 +913,15 @@ function HomeTab() {
         <p className="text-xs text-gray-300">Your panels offset <span className="text-green-400 font-bold">1.07 t</span> of CO₂ this year</p>
       </div>
     </div>
+    </>
   )
 }
 
 function ParksTab({ onSelectPark }) {
+  const [showMarket, setShowMarket] = useState(false)
   return (
+    <>
+    {showMarket && <MarketplaceSheet onClose={() => setShowMarket(false)} />}
     <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       <h1 className="text-xl font-bold mb-1">My Parks</h1>
       <p className="text-xs text-gray-500 mb-4">Tap a park to explore your panels</p>
@@ -811,10 +951,11 @@ function ParksTab({ onSelectPark }) {
           </div>
         </button>
       ))}
-      <button className="w-full border border-dashed border-amber-500/30 rounded-2xl py-3.5 text-amber-400 text-sm font-medium">
+      <button onClick={() => setShowMarket(true)} className="w-full border border-dashed border-amber-500/30 rounded-2xl py-3.5 text-amber-400 text-sm font-medium hover:bg-amber-500/5 transition-colors">
         + Invest in another park
       </button>
     </div>
+    </>
   )
 }
 
@@ -824,6 +965,15 @@ function PayoutsTab() {
     { m: "Dec", eur: 15.00 }, { m: "Jan", eur: 17.30 }, { m: "Feb", eur: 23.20 },
     { m: "Mar", eur: 30.80 },
   ]
+  const downloadCSV = () => {
+    const rows = [["Date", "kWh Produced", "Amount"], ...payoutHistory.map(p => [p.date, p.kwh, p.amount])]
+    const csv = rows.map(r => r.join(",")).join("\n")
+    const a = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
+      download: "solarshare-payouts.csv"
+    })
+    a.click()
+  }
   return (
     <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       <h1 className="text-xl font-bold mb-1">Payouts</h1>
@@ -862,7 +1012,12 @@ function PayoutsTab() {
       </div>
 
       {/* History */}
-      <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">History</p>
+      <div className="flex justify-between items-center mb-2">
+        <p className="text-xs text-gray-500 uppercase tracking-wider">History</p>
+        <button onClick={downloadCSV} className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 transition-colors">
+          <FileText size={11} /> Export CSV
+        </button>
+      </div>
       <div className="bg-gray-900 rounded-2xl overflow-hidden">
         {payoutHistory.map((p, i) => (
           <div key={i} className="flex justify-between items-center px-4 py-3 border-b border-gray-800/60 last:border-0">
