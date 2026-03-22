@@ -844,9 +844,9 @@ function HomeTab() {
       <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}>
         <p className="text-amber-100 text-xs mb-0.5">Total Invested</p>
         <p className="text-3xl font-bold mb-3">€4,800</p>
-        <div className="grid grid-cols-3 gap-2">
-          {[{ label: "Total earned", value: "€141.30" }, { label: "Avg. yield", value: "7.1% p.a." }, { label: "Next payout", value: "Apr 1" }].map(s => (
-            <div key={s.label}><p className="text-amber-100 text-xs">{s.label}</p><p className="text-base font-semibold">{s.value}</p></div>
+        <div className="grid grid-cols-4 gap-2">
+          {[{ label: "Total earned", value: "€141.30" }, { label: "Avg. yield", value: "7.1% p.a." }, { label: "Capacity", value: "4.8 kWp" }, { label: "Next payout", value: "Apr 1" }].map(s => (
+            <div key={s.label}><p className="text-amber-100 text-xs">{s.label}</p><p className="text-sm font-semibold">{s.value}</p></div>
           ))}
         </div>
       </div>
