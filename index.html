@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SolarShare — Solar Investment Platform</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "recharts": "https://esm.sh/recharts@2.15.4?deps=react@18.3.1,react-dom@18.3.1",
+      "lucide-react": "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1"
+    }
+  }
+  </script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #000; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useRef } from "react"
+import { Sun, MapPin, Zap, Users, Wallet, TrendingUp, Euro, Home, Leaf, BarChart2, ArrowLeft, ZoomIn, ZoomOut, Maximize2, Share2, Lock, Camera } from "lucide-react"
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const dailyCurve = [
+  { t: "6am", kw: 0.1 }, { t: "7am", kw: 0.6 }, { t: "8am", kw: 1.8 },
+  { t: "9am", kw: 2.9 }, { t: "10am", kw: 3.7 }, { t: "11am", kw: 4.1 },
+  { t: "12pm", kw: 4.4 }, { t: "1pm", kw: 4.2 }, { t: "2pm", kw: 3.9 },
+  { t: "3pm", kw: 3.3 }, { t: "4pm", kw: 2.5 }, { t: "5pm", kw: 1.4 },
+  { t: "6pm", kw: 0.5 }, { t: "7pm", kw: 0.0 },
+]
+
+const monthlyData = [
+  { m: "Sep", kwh: 312, eur: 21.5 }, { m: "Oct", kwh: 287, eur: 19.8 },
+  { m: "Nov", kwh: 198, eur: 13.7 }, { m: "Dec", kwh: 145, eur: 10.0 },
+  { m: "Jan", kwh: 167, eur: 11.5 }, { m: "Feb", kwh: 224, eur: 15.5 },
+  { m: "Mar", kwh: 298, eur: 20.6 },
+]
+
+// 14-day forecast starting today (Mar 21)
+const forecastDays = [
+  { d: "Sat", kwh: 18.4, type: "sunny" },
+  { d: "Sun", kwh: 19.2, type: "sunny" },
+  { d: "Mon", kwh: 15.6, type: "partly" },
+  { d: "Tue", kwh: 7.8,  type: "rainy"  },
+  { d: "Wed", kwh: 5.2,  type: "rainy"  },
+  { d: "Thu", kwh: 12.4, type: "partly" },
+  { d: "Fri", kwh: 17.8, type: "sunny"  },
+  { d: "Sat", kwh: 20.3, type: "sunny"  },
+  { d: "Sun", kwh: 19.0, type: "sunny"  },
+  { d: "Mon", kwh: 14.8, type: "partly" },
+  { d: "Tue", kwh: 16.5, type: "partly" },
+  { d: "Wed", kwh: 19.8, type: "sunny"  },
+  { d: "Thu", kwh: 21.2, type: "sunny"  },
+  { d: "Fri", kwh: 18.0, type: "sunny"  },
+]
+
+const milestones = [
+  { emoji: "⚡", color: "#f59e0b", title: "First kWh",   desc: "First energy produced",       date: "Sep 12",  done: true  },
+  { emoji: "🏠", color: "#60a5fa", title: "100 Homes",  desc: "Powered 100 homes in a day",  date: "Nov 3",   done: true  },
+  { emoji: "🌳", color: "#34d399", title: "1t CO₂",     desc: "Offset 1 tonne of carbon",    date: "Jan 28",  done: true  },
+  { emoji: "☀️", color: "#f59e0b", title: "1 MWh",      desc: "Total 1 megawatt-hour",        date: "Feb 14",  done: true  },
+  { emoji: "🏠", color: "#9ca3af", title: "500 Homes",  desc: "Power 500 homes in a day",    date: "—",       done: false },
+  { emoji: "🌳", color: "#9ca3af", title: "5t CO₂",     desc: "Offset 5 tonnes of carbon",   date: "—",       done: false },
+]
+
+const parkUpdates = [
+  { date: "Mar 15, 2026", type: "maintenance", label: "Maintenance", color: "#60a5fa", emoji: "🔧",
+    title: "Panel cleaning completed",
+    desc: "All 2,400 panels cleaned. Expect +3–5% production improvement over the next 30 days." },
+  { date: "Feb 28, 2026", type: "milestone",   label: "Milestone",   color: "#f59e0b", emoji: "⚡",
+    title: "1 GWh milestone reached",
+    desc: "The park has produced its first gigawatt-hour of clean energy since launch." },
+  { date: "Jan 14, 2026", type: "alert",       label: "Alert",       color: "#f87171", emoji: "⚠️",
+    title: "Brief downtime — inverter 3B",
+    desc: "Inverter serviced. Production reduced ~12% for 6 hours. No investor payout impact." },
+  { date: "Dec 2, 2025",  type: "news",        label: "Update",      color: "#34d399", emoji: "🎉",
+    title: "Park goes live",
+    desc: "Parque Solar Aljarafe is now fully operational and producing energy for investor accounts." },
+]
+
+const myParks = [
+  { id: 1, name: "Parque Solar Aljarafe", location: "Sevilla, Andalucía",
+    kWp: 3.2, panels: 8, monthly: 18.4, yield: 7.2, irr: 847,
+    lat: "37.38°N", lng: "5.97°W", investorPanels: 8, startPanel: 47,
+    investorRow: 2, investorColStart: 8 },
+  { id: 2, name: "Solar Valencia Norte", location: "Valencia",
+    kWp: 1.6, panels: 4, monthly: 9.1, yield: 6.8, irr: 712,
+    lat: "39.47°N", lng: "0.37°W", investorPanels: 4, startPanel: 23,
+    investorRow: 5, investorColStart: 14 },
+]
+
+const opParks = [
+  { name: "Parque Solar Aljarafe",  loc: "Sevilla",  cap: "2.4 MW", inv: 312, prod: "4,182 kWh", rev: "€287", status: "active" },
+  { name: "Solar Valencia Norte",   loc: "Valencia", cap: "1.1 MW", inv: 147, prod: "1,847 kWh", rev: "€127", status: "active" },
+  { name: "Extremadura Solar Hub",  loc: "Badajoz",  cap: "3.8 MW", inv: 0,   prod: "—",         rev: "—",    status: "onboarding" },
+]
+
+const opInvestors = [
+  { name: "Max Adelmann",   email: "ai@adelmann.es",  amount: "€4,800",  parks: 2, yield: "7.1%", kyc: "verified" },
+  { name: "Sara González",  email: "s.gonzalez@...",  amount: "€12,000", parks: 3, yield: "7.3%", kyc: "verified" },
+  { name: "Thomas Müller",  email: "t.mueller@...",   amount: "€2,000",  parks: 1, yield: "6.8%", kyc: "verified" },
+  { name: "Ana Martínez",   email: "ana.m@...",       amount: "€1,000",  parks: 1, yield: "7.2%", kyc: "pending"  },
+  { name: "Javier Ruiz",    email: "j.ruiz@...",      amount: "€5,500",  parks: 2, yield: "7.0%", kyc: "verified" },
+]
+
+// ─── Production Forecast ──────────────────────────────────────────────────────
+
+function ProductionForecast() {
+  const W = 292, H = 90
+  const maxKwh = Math.max(...forecastDays.map(d => d.kwh))
+  const colW = W / forecastDays.length
+  const barW = colW * 0.55
+  const maxBarH = 52
+  const barBaseY = H - 16
+
+  const weatherColor = { sunny: "#fbbf24", partly: "#d1d5db", rainy: "#60a5fa" }
+  const weatherShape = (type, cx, cy) => {
+    if (type === "sunny")  return <circle cx={cx} cy={cy} r="3.5" fill="#fbbf24" />
+    if (type === "rainy")  return <circle cx={cx} cy={cy} r="3.5" fill="#60a5fa" />
+    return <circle cx={cx} cy={cy} r="3.5" fill="#9ca3af" />
+  }
+
+  // Projected payout: already-earned + remaining forecast
+  const alreadyEarned = 14.8 // days 1–20 at ~0.069/kWh
+  const remaining = forecastDays.slice(0).reduce((s, d) => s + d.kwh * 0.069, 0)
+  const low = (alreadyEarned + remaining * 0.93).toFixed(0)
+  const high = (alreadyEarned + remaining * 1.07).toFixed(0)
+  const progress = Math.round((21 / 31) * 100)
+
+  return (
+    <div className="bg-gray-900 rounded-2xl p-4 mb-3">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p className="text-xs font-semibold text-gray-300">March Payout Forecast</p>
+          <p className="text-xs text-gray-500 mt-0.5">Based on 14-day weather outlook</p>
+        </div>
+        <div className="text-right">
+          <p className="text-base font-bold text-amber-400">€{low}–{high}</p>
+          <p className="text-xs text-gray-500">projected</p>
+        </div>
+      </div>
+
+      {/* Progress through month */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 bg-gray-800 rounded-full h-1.5">
+          <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="text-xs text-gray-500 flex-shrink-0">21 / 31 days</p>
+      </div>
+
+      {/* Bar chart */}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+        {forecastDays.map((day, i) => {
+          const x = i * colW + colW / 2
+          const bh = (day.kwh / maxKwh) * maxBarH
+          const by = barBaseY - bh
+          const isToday = i === 0
+          return (
+            <g key={i}>
+              <rect
+                x={x - barW / 2} y={by}
+                width={barW} height={bh}
+                fill={isToday ? "#f59e0b" : day.type === "rainy" ? "#374151" : "#1e3a6b"}
+                opacity={isToday ? 1 : 0.7}
+                rx="1.5"
+              />
+              {weatherShape(day.type, x, by - 6)}
+              <text x={x} y={H - 3} textAnchor="middle"
+                fill={isToday ? "#f59e0b" : "#4b5563"} fontSize="6" fontFamily="system-ui">
+                {isToday ? "today" : day.d}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex gap-3 mt-1">
+        {[{ c: "#fbbf24", l: "Sunny" }, { c: "#9ca3af", l: "Partly" }, { c: "#60a5fa", l: "Rainy" }].map(s => (
+          <div key={s.l} className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full" style={{ background: s.c }} />
+            <span className="text-xs text-gray-600">{s.l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Milestones Section ───────────────────────────────────────────────────────
+
+function MilestonesSection() {
+  return (
+    <div className="mb-3">
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-0.5">Your Milestones</p>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+        {milestones.map((m, i) => (
+          <div key={i} className="flex-shrink-0 rounded-xl p-3 border"
+            style={{
+              width: 108,
+              background: m.done ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+              borderColor: m.done ? m.color + "50" : "#1f2937",
+            }}>
+            <div className="text-xl mb-1">{m.done ? m.emoji : "🔒"}</div>
+            <p className="text-xs font-bold leading-tight" style={{ color: m.done ? "#f9fafb" : "#4b5563" }}>
+              {m.title}
+            </p>
+            <p className="text-xs mt-0.5 leading-tight" style={{ color: m.done ? "#9ca3af" : "#374151" }}>
+              {m.desc}
+            </p>
+            {m.done ? (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-xs" style={{ color: m.color }}>{m.date}</span>
+                <button className="flex items-center gap-0.5 text-gray-600 hover:text-gray-400">
+                  <Share2 size={9} /><span className="text-xs">Share</span>
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs mt-2 text-gray-700">Locked</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Webcam Feed ──────────────────────────────────────────────────────────────
+
+function WebcamFeed({ park }) {
+  const [fullscreen, setFullscreen] = useState(false)
+  const W = 300, H = 178
+
+  return (
+    <div className="mb-5">
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">📷 Live Park Feed</p>
+      <div className="relative rounded-xl overflow-hidden" style={{ height: H }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`}>
+          <defs>
+            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#2c6fa8" />
+              <stop offset="70%"  stopColor="#7ab8d4" />
+              <stop offset="100%" stopColor="#b8dcea" />
+            </linearGradient>
+            <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"  stopColor="#4a5e2a" />
+              <stop offset="100%" stopColor="#2e3a1a" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          {/* Sky */}
+          <rect width={W} height={H} fill="url(#skyGrad)" />
+
+          {/* Sun glow */}
+          <circle cx={242} cy={34} r={38} fill="#ffe082" opacity={0.15} />
+          {/* Sun */}
+          <circle cx={242} cy={34} r={20} fill="#ffe566" filter="url(#glow)" />
+          {/* Sun rays */}
+          {Array.from({ length: 8 }, (_, i) => {
+            const angle = (i * 45) * Math.PI / 180
+            const x1 = 242 + Math.cos(angle) * 24, y1 = 34 + Math.sin(angle) * 24
+            const x2 = 242 + Math.cos(angle) * 30, y2 = 34 + Math.sin(angle) * 30
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ffe566" strokeWidth="1.5" opacity="0.5" />
+          })}
+
+          {/* Distant hills */}
+          <path d="M0,108 Q40,96 90,104 Q130,95 180,102 Q220,94 270,103 Q285,106 300,108 L300,115 L0,115 Z"
+            fill="#3a5a25" />
+          <path d="M0,113 Q60,106 120,111 Q180,104 240,110 L300,113 L300,125 L0,125 Z"
+            fill="#4a6a30" />
+
+          {/* Ground */}
+          <rect x={0} y={115} width={W} height={H - 115} fill="url(#groundGrad)" />
+
+          {/* Access track */}
+          <path d="M130,178 L148,120 L152,120 L160,178 Z" fill="#7a6a40" opacity="0.6" />
+
+          {/* Far panel row (background) */}
+          {Array.from({ length: 14 }, (_, i) => {
+            const x = 8 + i * 21
+            return (
+              <g key={i}>
+                <rect x={x} y={108} width={14} height={4} fill="#0d1f3a" rx="0.5" />
+                <line x1={x + 7} y1={112} x2={x + 7} y2={115} stroke="#1a2a40" strokeWidth="1" />
+              </g>
+            )
+          })}
+
+          {/* Mid panel row */}
+          {Array.from({ length: 9 }, (_, i) => {
+            const x = 5 + i * 32
+            if (x > 290) return null
+            return (
+              <g key={i}>
+                <rect x={x} y={118} width={22} height={8} fill="#0a1830" rx="1" />
+                <line x1={x + 7}  y1={118} x2={x + 7}  y2={126} stroke="#1a2a40" strokeWidth="0.5" opacity="0.5" />
+                <line x1={x + 15} y1={118} x2={x + 15} y2={126} stroke="#1a2a40" strokeWidth="0.5" opacity="0.5" />
+                <line x1={x + 11} y1={126} x2={x + 11} y2={134} stroke="#1a2a3a" strokeWidth="1.2" />
+                <rect x={x - 1} y={134} width={24} height={2} fill="#1a2a3a" rx="0.5" />
+              </g>
+            )
+          })}
+
+          {/* Near panel row (foreground, partially cut off) */}
+          {Array.from({ length: 6 }, (_, i) => {
+            const x = -10 + i * 52
+            if (x > 295) return null
+            return (
+              <g key={i}>
+                <rect x={x} y={140} width={40} height={18} fill="#080f1e" rx="1.5" />
+                {/* Cell lines */}
+                {[0.25, 0.5, 0.75].map(f => (
+                  <line key={f} x1={x + f * 40} y1={141} x2={x + f * 40} y2={157}
+                    stroke="#1a2a40" strokeWidth="0.6" opacity="0.6" />
+                ))}
+                <line x1={x + 1} y1={149} x2={x + 39} y2={149} stroke="#1a2a40" strokeWidth="0.4" opacity="0.5" />
+                {/* Support legs */}
+                <line x1={x + 10} y1={158} x2={x + 8}  y2={170} stroke="#2a3a28" strokeWidth="1.5" />
+                <line x1={x + 30} y1={158} x2={x + 32} y2={170} stroke="#2a3a28" strokeWidth="1.5" />
+                <line x1={x + 5}  y1={170} x2={x + 35} y2={170} stroke="#2a3a28" strokeWidth="1.5" />
+              </g>
+            )
+          })}
+
+          {/* Film grain overlay (subtle) */}
+          <rect width={W} height={H} fill="none"
+            stroke="transparent"
+            style={{ imageRendering: "pixelated" }} />
+
+          {/* Top UI bar */}
+          <rect width={W} height={22} fill="rgba(0,0,0,0.65)" />
+          {/* REC dot */}
+          <circle cx={10} cy={11} r={4} fill="#ef4444" />
+          <circle cx={10} cy={11} r={4} fill="#ef4444" opacity={0.5}>
+            <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+          </circle>
+          <text x={18} y={15} fill="white" fontSize="7.5" fontFamily="monospace" fontWeight="600">REC</text>
+          <text x={W / 2} y={15} textAnchor="middle" fill="#d1d5db" fontSize="7" fontFamily="system-ui">
+            Cam 2 — South Array · {park.name}
+          </text>
+          <text x={W - 5} y={15} textAnchor="end" fill="#9ca3af" fontSize="7" fontFamily="monospace">
+            14:23:07
+          </text>
+
+          {/* Bottom UI bar */}
+          <rect y={H - 22} width={W} height={22} fill="rgba(0,0,0,0.65)" />
+          <text x={6} y={H - 8} fill="#d1d5db" fontSize="7" fontFamily="system-ui">
+            📍 {park.lat}, {park.lng}
+          </text>
+          <text x={W - 6} y={H - 8} textAnchor="end" fill="#fbbf24" fontSize="7" fontFamily="system-ui">
+            ☀️ {park.irr} W/m²
+          </text>
+
+          {/* Camera icon corner */}
+          <g transform="translate(280,28)">
+            <rect x={-9} y={-9} width={18} height={18} rx="4" fill="rgba(0,0,0,0.5)" />
+            <text textAnchor="middle" y="4" fontSize="9">📷</text>
+          </g>
+        </svg>
+      </div>
+      <p className="text-xs text-gray-700 text-center mt-1">Updated every 60 seconds · Security feed</p>
+    </div>
+  )
+}
+
+// ─── Park Updates Feed ────────────────────────────────────────────────────────
+
+function ParkUpdatesFeed() {
+  return (
+    <div className="bg-gray-900 rounded-2xl p-4">
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">📋 Park Updates</p>
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-800" />
+        {parkUpdates.map((u, i) => (
+          <div key={i} className="flex gap-3 mb-4 last:mb-0 relative">
+            {/* Dot */}
+            <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm z-10"
+              style={{ background: u.color + "20", border: `1px solid ${u.color}40` }}>
+              <span style={{ fontSize: 11 }}>{u.emoji}</span>
+            </div>
+            <div className="flex-1 pt-0.5">
+              <div className="flex justify-between items-start mb-0.5">
+                <p className="text-xs font-semibold text-gray-200">{u.title}</p>
+                <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-2"
+                  style={{ background: u.color + "20", color: u.color, fontSize: 9 }}>
+                  {u.label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">{u.desc}</p>
+              <p className="text-xs text-gray-700 mt-1">{u.date}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Aerial Map ───────────────────────────────────────────────────────────────
+
+function AerialMap({ park }) {
+  const W = 300, H = 178
+  const [vb, setVb] = useState({ x: 0, y: 0, w: W, h: H })
+  const [dragging, setDragging] = useState(false)
+  const dragRef = useRef(null)
+
+  const PANEL_W = 10, PANEL_H = 5, H_GAP = 1, V_GAP = 7
+  const PPR = 24, TOTAL_ROWS = 16, MX = 8, MY = 9
+  const ROAD_H = 11, ROAD_Y = MY + 8 * (PANEL_H + V_GAP)
+
+  const rowY = (r) => r < 8
+    ? MY + r * (PANEL_H + V_GAP)
+    : MY + 8 * (PANEL_H + V_GAP) + ROAD_H + 3 + (r - 8) * (PANEL_H + V_GAP)
+
+  const isInvestor = (r, p) =>
+    r === park.investorRow && p >= park.investorColStart && p < park.investorColStart + park.investorPanels
+
+  const doZoom = (f) => setVb(v => {
+    const nw = Math.min(W, Math.max(70, v.w * f)), nh = Math.min(H, Math.max(42, v.h * f))
+    return { x: Math.max(0, Math.min(W - nw, v.x + (v.w - nw) / 2)), y: Math.max(0, Math.min(H - nh, v.y + (v.h - nh) / 2)), w: nw, h: nh }
+  })
+
+  const applyDrag = (cx, cy) => {
+    if (!dragRef.current) return
+    const scale = W / vb.w
+    setVb(v => ({
+      ...v,
+      x: Math.max(0, Math.min(W - v.w, v.x - (cx - dragRef.current.x) / scale)),
+      y: Math.max(0, Math.min(H - v.h, v.y - (cy - dragRef.current.y) / scale)),
+    }))
+    dragRef.current = { x: cx, y: cy }
+  }
+
+  const invLabelX = MX + (park.investorColStart + park.investorPanels / 2) * (PANEL_W + H_GAP)
+  const invRowY = rowY(park.investorRow)
+
+  return (
+    <div className="relative rounded-xl overflow-hidden select-none" style={{ height: H }}>
+      <svg width="100%" height="100%" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+        style={{ cursor: dragging ? "grabbing" : "grab", display: "block" }}
+        onMouseDown={e => { setDragging(true); dragRef.current = { x: e.clientX, y: e.clientY } }}
+        onMouseMove={e => applyDrag(e.clientX, e.clientY)}
+        onMouseUp={() => { setDragging(false); dragRef.current = null }}
+        onMouseLeave={() => { setDragging(false); dragRef.current = null }}
+        onTouchStart={e => { dragRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }}
+        onTouchMove={e => applyDrag(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={() => { dragRef.current = null }}>
+        <rect width={W} height={H} fill="#4d6127" />
+        {Array.from({ length: 12 }, (_, i) => <rect key={i} x={0} y={i * 15} width={W} height={8} fill="#435520" opacity="0.45" />)}
+        {Array.from({ length: TOTAL_ROWS }, (_, r) => {
+          const y = rowY(r)
+          return Array.from({ length: PPR }, (_, p) => {
+            const x = MX + p * (PANEL_W + H_GAP), inv = isInvestor(r, p)
+            return <rect key={`${r}-${p}`} x={x} y={y} width={PANEL_W} height={PANEL_H}
+              fill={inv ? "#f59e0b" : "#1a3560"} stroke={inv ? "#fcd34d" : "#243f75"}
+              strokeWidth={inv ? 0.6 : 0.3} rx="0.4" />
+          })
+        })}
+        {Array.from({ length: TOTAL_ROWS }, (_, r) => (
+          <rect key={r} x={MX} y={rowY(r) + PANEL_H} width={PPR * (PANEL_W + H_GAP) - H_GAP} height={2} fill="#000" opacity="0.13" />
+        ))}
+        <rect x={MX} y={ROAD_Y} width={PPR * (PANEL_W + H_GAP) - H_GAP} height={ROAD_H} fill="#9b8c5e" opacity="0.65" />
+        <line x1={MX} y1={ROAD_Y + ROAD_H / 2} x2={MX + PPR * (PANEL_W + H_GAP)} y2={ROAD_Y + ROAD_H / 2}
+          stroke="#b5a472" strokeWidth="0.6" strokeDasharray="5,4" opacity="0.7" />
+        <line x1={invLabelX} y1={invRowY - 2} x2={invLabelX} y2={invRowY - 7} stroke="#f59e0b" strokeWidth="0.8" />
+        <rect x={invLabelX - 18} y={invRowY - 17} width={36} height={9} rx="2" fill="rgba(0,0,0,0.6)" />
+        <text x={invLabelX} y={invRowY - 10} textAnchor="middle" fill="#fbbf24" fontSize="5.5" fontFamily="system-ui" fontWeight="600">Your panels</text>
+        <rect x="1.5" y="1.5" width={W - 3} height={H - 3} fill="none" stroke="#a09862" strokeWidth="1.5" rx="1" />
+        <g transform="translate(283, 16)">
+          <circle r="9" fill="rgba(0,0,0,0.55)" />
+          <polygon points="0,-6 2,0 0,2 -2,0" fill="white" opacity="0.9" />
+          <polygon points="0,2 2,6 0,4 -2,6" fill="white" opacity="0.4" />
+          <text textAnchor="middle" y="-7" fill="white" fontSize="4.5" fontFamily="system-ui" fontWeight="bold">N</text>
+        </g>
+        <g transform="translate(9, 166)">
+          <rect width={20} height={2.5} fill="white" opacity="0.7" />
+          <rect x={10} width={10} height={2.5} fill="#2d3748" opacity="0.9" />
+          <text y={9} fill="white" fontSize="5" fontFamily="monospace" opacity="0.75">100m</text>
+        </g>
+        <text x={W - 4} y={H - 3} fill="#d4d45a" fontSize="5" fontFamily="monospace" opacity="0.8" textAnchor="end">
+          {park.lat} {park.lng}
+        </text>
+      </svg>
+      <div className="absolute top-2 right-2 flex flex-col gap-1">
+        {[
+          { icon: <ZoomIn size={12} />, action: () => doZoom(0.6) },
+          { icon: <Maximize2 size={10} />, action: () => setVb({ x: 0, y: 0, w: W, h: H }) },
+          { icon: <ZoomOut size={12} />, action: () => doZoom(1.6) },
+        ].map((btn, i) => (
+          <button key={i} onClick={btn.action}
+            className="w-7 h-7 bg-black/60 hover:bg-black/80 rounded-lg flex items-center justify-center text-white transition-colors">
+            {btn.icon}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Panel Ownership Grid ─────────────────────────────────────────────────────
+
+function PanelOwnershipGrid({ park }) {
+  const COLS = 28, ROWS = 22, PW = 8, PH = 5, GAP = 1.5
+  const W = COLS * (PW + GAP) - GAP, H = ROWS * (PH + GAP) - GAP
+  const isInvestor = (r, c) => r === park.investorRow && c >= park.investorColStart && c < park.investorColStart + park.investorPanels
+  const hX = park.investorColStart * (PW + GAP) - 1, hY = park.investorRow * (PH + GAP) - 1
+  const hW = park.investorPanels * (PW + GAP) + 1, hH = PH + 2
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <svg width={W} height={H + 22}>
+        {Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => {
+          const inv = isInvestor(r, c)
+          return <rect key={`${r}-${c}`} x={c * (PW + GAP)} y={r * (PH + GAP)} width={PW} height={PH}
+            fill={inv ? "#f59e0b" : "#1a3560"} opacity={inv ? 1 : 0.4} rx="0.5" />
+        }))}
+        <rect x={hX} y={hY} width={hW} height={hH} fill="none" stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="3,2" rx="1.5" />
+        <text x={hX + hW / 2} y={H + 14} textAnchor="middle" fill="#f59e0b" fontSize="7.5" fontFamily="system-ui" fontWeight="600">
+          Row {park.investorRow + 1} · Panels {park.startPanel}–{park.startPanel + park.investorPanels - 1}
+        </text>
+      </svg>
+      <div className="flex gap-4 mt-2">
+        <div className="flex items-center gap-1.5"><div className="w-3.5 h-2.5 rounded-sm bg-amber-500" /><span className="text-xs text-gray-400">Your {park.investorPanels} panels</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-3.5 h-2.5 rounded-sm bg-blue-900 opacity-50" /><span className="text-xs text-gray-400">Other investors</span></div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Module Illustration ──────────────────────────────────────────────────────
+
+function ModuleIllustration({ panelNumber }) {
+  const CC = 10, CR = 6, CW = 19, CH = 23, CG = 2, FR = 8
+  const iW = CC * (CW + CG) - CG, iH = CR * (CH + CG) - CG
+  const tW = iW + 2 * FR, tH = iH + 2 * FR
+  return (
+    <svg width={tW} height={tH + 34} viewBox={`0 0 ${tW} ${tH + 34}`}>
+      <rect width={tW} height={tH} rx="4" fill="#8d99a6" />
+      <rect x={2} y={2} width={tW - 4} height={tH - 4} rx="3" fill="#a8b4bf" />
+      <rect x={4} y={4} width={tW - 8} height={tH - 8} rx="2.5" fill="#2c3e50" />
+      <rect x={FR - 2} y={FR - 2} width={iW + 4} height={iH + 4} rx="1.5" fill="#1b3358" />
+      <path d={`M${FR + 4},${FR + 4} L${FR + iW * 0.28},${FR + 4} L${FR + 4},${FR + iH * 0.2} Z`} fill="white" opacity="0.04" />
+      {Array.from({ length: CR }, (_, r) => Array.from({ length: CC }, (_, c) => {
+        const x = FR + c * (CW + CG), y = FR + r * (CH + CG)
+        return (
+          <g key={`${r}-${c}`}>
+            <rect x={x} y={y} width={CW} height={CH} fill="#0c1f3f" rx="0.5" />
+            <rect x={x} y={y} width={CW} height={CH} rx="0.5" fill="none" stroke="#1a3660" strokeWidth="0.4" />
+            <line x1={x + CW * 0.3} y1={y + 1} x2={x + CW * 0.3} y2={y + CH - 1} stroke="#b8c4cc" strokeWidth="0.5" opacity="0.55" />
+            <line x1={x + CW * 0.7} y1={y + 1} x2={x + CW * 0.7} y2={y + CH - 1} stroke="#b8c4cc" strokeWidth="0.5" opacity="0.55" />
+            {Array.from({ length: 5 }, (_, fl) => (
+              <line key={fl} x1={x + 1} y1={y + (fl + 1) * CH / 6} x2={x + CW - 1} y2={y + (fl + 1) * CH / 6} stroke="#b8c4cc" strokeWidth="0.25" opacity="0.3" />
+            ))}
+          </g>
+        )
+      }))}
+      {Array.from({ length: CC - 1 }, (_, c) => <rect key={c} x={FR + (c + 1) * (CW + CG) - CG} y={FR} width={CG} height={iH} fill="#0a1929" />)}
+      {Array.from({ length: CR - 1 }, (_, r) => <rect key={r} x={FR} y={FR + (r + 1) * (CH + CG) - CG} width={iW} height={CG} fill="#0a1929" />)}
+      <rect x={tW / 2 - 20} y={tH - 16} width={40} height={12} rx="2.5" fill="#374151" stroke="#4b5563" strokeWidth="0.8" />
+      <circle cx={tW / 2 - 10} cy={tH - 10} r="3.5" fill="#1f2937" stroke="#6b7280" strokeWidth="0.6" />
+      <circle cx={tW / 2 + 10} cy={tH - 10} r="3.5" fill="#1f2937" stroke="#6b7280" strokeWidth="0.6" />
+      <rect x={tW / 2 - 22} y={tH - 12} width={3} height={5} rx="1" fill="#1f2937" stroke="#6b7280" strokeWidth="0.4" />
+      <rect x={tW / 2 + 19} y={tH - 12} width={3} height={5} rx="1" fill="#1f2937" stroke="#6b7280" strokeWidth="0.4" />
+      {[[FR / 2, tH / 2], [tW - FR / 2, tH / 2], [tW / 2, FR / 2], [tW / 2, tH - FR / 2]].map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r="2.2" fill="#1e2a38" stroke="#7a8694" strokeWidth="0.6" />
+      ))}
+      <rect x={FR} y={FR} width={54} height={13} rx="2" fill="rgba(0,0,0,0.65)" />
+      <text x={FR + 5} y={FR + 9} fill="#f59e0b" fontSize="7.5" fontFamily="system-ui" fontWeight="700">Panel #{panelNumber}</text>
+      <text x={tW / 2} y={tH + 14} textAnchor="middle" fill="#f59e0b" fontSize="9" fontFamily="system-ui" fontWeight="600">Your module · Panel #{panelNumber}</text>
+      <text x={tW / 2} y={tH + 27} textAnchor="middle" fill="#6b7280" fontSize="7" fontFamily="system-ui">400 Wp · Monocrystalline PERC · 21.5% efficiency</text>
+    </svg>
+  )
+}
+
+// ─── Park Detail View ─────────────────────────────────────────────────────────
+
+function ParkDetailView({ park, onBack }) {
+  return (
+    <div className="px-4 pb-24 pt-2">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 text-sm mb-4 hover:text-gray-200 transition-colors">
+        <ArrowLeft size={15} /> My Parks
+      </button>
+      <div className="mb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-lg font-bold leading-tight">{park.name}</h2>
+            <p className="text-xs text-gray-500 flex items-center gap-0.5 mt-0.5"><MapPin size={10} />{park.location}</p>
+          </div>
+          <span className="text-xs bg-green-900/40 text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1 mt-0.5">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />Active
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2 mb-5">
+        {[{ l: "Your kWp", v: `${park.kWp}` }, { l: "Panels", v: `${park.panels}` }, { l: "Avg/mo", v: `€${park.monthly}` }, { l: "Yield", v: `${park.yield}%` }].map(s => (
+          <div key={s.l} className="bg-gray-900 rounded-xl p-2.5 text-center">
+            <p className="text-xs text-gray-500">{s.l}</p>
+            <p className="text-sm font-bold mt-0.5">{s.v}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Webcam */}
+      <WebcamFeed park={park} />
+
+      {/* Location Map */}
+      <div className="mb-5">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">📍 Park Location</p>
+        <AerialMap park={park} />
+        <p className="text-xs text-gray-600 text-center mt-1.5">{park.lat}, {park.lng} · Drag to pan · Use +/− to zoom</p>
+      </div>
+
+      {/* Panel Ownership Grid */}
+      <div className="bg-gray-900 rounded-2xl p-4 mb-4">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">⚡ Your Panels in This Park</p>
+        <PanelOwnershipGrid park={park} />
+      </div>
+
+      {/* Module Illustration */}
+      <div className="bg-gray-900 rounded-2xl p-4 mb-4">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">🔆 Your Module Detail</p>
+        <div className="flex justify-center overflow-x-auto">
+          <ModuleIllustration panelNumber={park.startPanel} />
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {[{ l: "Technology", v: "Mono PERC" }, { l: "Power", v: "400 Wp" }, { l: "Efficiency", v: "21.5%" }, { l: "Dimensions", v: "1.72 × 1.13m" }, { l: "Weight", v: "20.5 kg" }, { l: "Warranty", v: "25 years" }].map(s => (
+            <div key={s.l} className="bg-gray-800/60 rounded-xl p-2">
+              <p className="text-xs text-gray-500">{s.l}</p>
+              <p className="text-xs font-semibold mt-0.5">{s.v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Park Updates */}
+      <ParkUpdatesFeed />
+    </div>
+  )
+}
+
+// ─── Investor App ─────────────────────────────────────────────────────────────
+
+function InvestorApp() {
+  const [tab, setTab] = useState("home")
+  const [selectedPark, setSelectedPark] = useState(null)
+  return (
+    <div className="bg-gray-950 text-white flex flex-col" style={{ height: 720, fontFamily: "system-ui,-apple-system,sans-serif" }}>
+      <div className="flex justify-between items-center px-5 pt-3 pb-1 text-xs text-gray-500 flex-shrink-0">
+        <span>9:41</span><span className="tracking-widest">● ● ●</span>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {tab === "home" && <HomeTab />}
+        {tab === "parks" && !selectedPark && <ParksTab onSelectPark={setSelectedPark} />}
+        {tab === "parks" && selectedPark && <ParkDetailView park={selectedPark} onBack={() => setSelectedPark(null)} />}
+        {tab === "payouts" && <PayoutsTab />}
+      </div>
+      <div className="flex-shrink-0 bg-gray-900 border-t border-gray-800 flex justify-around py-2.5 px-6">
+        {[
+          { id: "home",    icon: <Home size={19} />,   label: "Portfolio" },
+          { id: "parks",   icon: <Sun size={19} />,    label: "My Parks"  },
+          { id: "payouts", icon: <Wallet size={19} />, label: "Payouts"   },
+        ].map(t => (
+          <button key={t.id} onClick={() => { setTab(t.id); if (t.id !== "parks") setSelectedPark(null) }}
+            className={`flex flex-col items-center gap-0.5 text-xs transition-colors ${tab === t.id ? "text-amber-400" : "text-gray-600"}`}>
+            {t.icon}<span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function HomeTab() {
+  return (
+    <div className="px-4 pb-4 pt-1">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-5">
+        <div><p className="text-gray-400 text-xs">Good morning,</p><h1 className="text-xl font-bold">Max</h1></div>
+        <div className="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center text-black font-bold text-sm">M</div>
+      </div>
+
+      {/* Hero card */}
+      <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}>
+        <p className="text-amber-100 text-xs mb-0.5">Total Invested</p>
+        <p className="text-3xl font-bold mb-3">€4,800</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[{ label: "Total earned", value: "€287.40" }, { label: "Avg. yield", value: "7.1% p.a." }, { label: "Next payout", value: "Apr 1" }].map(s => (
+            <div key={s.label}><p className="text-amber-100 text-xs">{s.label}</p><p className="text-base font-semibold">{s.value}</p></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Today's production */}
+      <div className="bg-gray-900 rounded-2xl p-4 mb-3">
+        <div className="flex justify-between items-center mb-1">
+          <p className="text-xs font-semibold text-gray-300">Today's Production</p>
+          <div className="flex items-center gap-1.5 bg-amber-500/20 px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+            <span className="text-amber-400 text-xs">847 W/m²</span>
+          </div>
+        </div>
+        <p className="text-xl font-bold">18.4 kWh <span className="text-sm font-normal text-gray-500">produced</span></p>
+        <p className="text-xs text-green-400 mb-2">≈ €1.27 earned today</p>
+        <ResponsiveContainer width="100%" height={70}>
+          <AreaChart data={dailyCurve} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="solarGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="kw" stroke="#f59e0b" strokeWidth={2} fill="url(#solarGrad)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+        <div className="flex justify-between text-xs text-gray-700 -mt-1"><span>6am</span><span>12pm</span><span>7pm</span></div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {[{ label: "This week", kwh: "89 kWh", eur: "€6.15" }, { label: "This month", kwh: "298 kWh", eur: "€20.6" }, { label: "All time", kwh: "2,134 kWh", eur: "€147" }].map(s => (
+          <div key={s.label} className="bg-gray-900 rounded-xl p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+            <p className="text-xs font-bold">{s.kwh}</p>
+            <p className="text-xs text-green-400">{s.eur}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Production Forecast */}
+      <ProductionForecast />
+
+      {/* Milestones */}
+      <MilestonesSection />
+
+      {/* Impact */}
+      <div className="bg-green-950/40 border border-green-900/60 rounded-2xl p-3 flex items-center gap-2">
+        <Leaf size={15} className="text-green-400 flex-shrink-0" />
+        <p className="text-xs text-gray-300">Your panels offset <span className="text-green-400 font-bold">1.07 t</span> of CO₂ this year</p>
+      </div>
+    </div>
+  )
+}
+
+function ParksTab({ onSelectPark }) {
+  return (
+    <div className="px-4 pb-4 pt-1">
+      <h1 className="text-xl font-bold mb-1">My Parks</h1>
+      <p className="text-xs text-gray-500 mb-4">Tap a park to explore your panels</p>
+      {myParks.map(p => (
+        <button key={p.id} onClick={() => onSelectPark(p)}
+          className="w-full bg-gray-900 rounded-2xl p-4 mb-3 text-left hover:bg-gray-800/80 transition-colors">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-bold text-sm">{p.name}</p>
+              <p className="text-xs text-gray-500 flex items-center gap-0.5 mt-0.5"><MapPin size={10} />{p.location}</p>
+            </div>
+            <span className="text-xs bg-green-900/40 text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />Active
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5 mb-3">
+            {[{ l: "kWp", v: p.kWp }, { l: "Panels", v: p.panels }, { l: "Avg/mo", v: `€${p.monthly}` }, { l: "Yield", v: `${p.yield}%` }].map(s => (
+              <div key={s.l} className="bg-gray-800 rounded-xl p-2 text-center">
+                <p className="text-xs text-gray-500">{s.l}</p>
+                <p className="text-xs font-bold mt-0.5">{s.v}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-gray-800 rounded-xl px-3 py-2 flex justify-between items-center">
+            <div className="flex items-center gap-1.5 text-xs text-gray-400"><Sun size={13} className="text-amber-400" />Live irradiation</div>
+            <span className="text-amber-400 text-sm font-bold">{p.irr} W/m²</span>
+          </div>
+        </button>
+      ))}
+      <button className="w-full border border-dashed border-amber-500/30 rounded-2xl py-3.5 text-amber-400 text-sm font-medium">
+        + Invest in another park
+      </button>
+    </div>
+  )
+}
+
+function PayoutsTab() {
+  const payouts = [
+    { date: "Mar 1, 2026", kwh: "398 kWh", amount: "€27.50" },
+    { date: "Feb 1, 2026", kwh: "365 kWh", amount: "€25.20" },
+    { date: "Jan 1, 2026", kwh: "320 kWh", amount: "€22.10" },
+    { date: "Dec 1, 2025", kwh: "287 kWh", amount: "€19.80" },
+    { date: "Nov 1, 2025", kwh: "198 kWh", amount: "€13.70" },
+  ]
+  return (
+    <div className="px-4 pb-4 pt-1">
+      <h1 className="text-xl font-bold mb-1">Payouts</h1>
+      <p className="text-gray-500 text-xs mb-4">Monthly dividends from your solar parks</p>
+      <div className="bg-gray-900 rounded-2xl p-4 mb-5">
+        <p className="text-xs text-gray-400 mb-1">Next estimated payout</p>
+        <div className="flex justify-between items-center">
+          <div><p className="text-2xl font-bold">~€28.40</p><p className="text-xs text-gray-500">April 1, 2026</p></div>
+          <span className="bg-amber-500/15 text-amber-400 text-xs px-3 py-1.5 rounded-full">Projected</span>
+        </div>
+      </div>
+      <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">History</p>
+      {payouts.map((p, i) => (
+        <div key={i} className="flex justify-between items-center py-3 border-b border-gray-800/60 last:border-0">
+          <div><p className="text-sm font-medium">{p.date}</p><p className="text-xs text-gray-600">{p.kwh} produced</p></div>
+          <div className="text-right"><p className="text-green-400 font-bold text-sm">{p.amount}</p><p className="text-xs text-gray-600">Paid</p></div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Operator Dashboard ───────────────────────────────────────────────────────
+
+function OperatorDashboard() {
+  const [section, setSection] = useState("overview")
+  const nav = [
+    { id: "overview",      icon: <BarChart2 size={15} />, label: "Overview"      },
+    { id: "parks",         icon: <Sun size={15} />,       label: "Parks"         },
+    { id: "investors",     icon: <Users size={15} />,     label: "Investors"     },
+    { id: "distributions", icon: <Wallet size={15} />,    label: "Distributions" },
+  ]
+  return (
+    <div className="flex text-white" style={{ minHeight: 720, fontFamily: "system-ui,-apple-system,sans-serif", background: "#030712" }}>
+      <div className="w-52 bg-gray-950 border-r border-gray-800/70 flex flex-col py-5 px-3 flex-shrink-0">
+        <div className="flex items-center gap-2 mb-7 px-2">
+          <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0"><Sun size={13} className="text-black" /></div>
+          <span className="font-bold text-sm">SolarShare</span>
+          <span className="text-xs bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded ml-auto">Admin</span>
+        </div>
+        {nav.map(item => (
+          <button key={item.id} onClick={() => setSection(item.id)}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm mb-0.5 transition-colors text-left ${section === item.id ? "bg-amber-500/10 text-amber-400" : "text-gray-500 hover:text-gray-200 hover:bg-gray-800/60"}`}>
+            {item.icon}{item.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 overflow-auto">
+        {section === "overview"      && <OverviewSection />}
+        {section === "parks"         && <ParksSection />}
+        {section === "investors"     && <InvestorsSection />}
+        {section === "distributions" && <DistributionsSection />}
+      </div>
+    </div>
+  )
+}
+
+function OverviewSection() {
+  const kpis = [
+    { label: "Total AUM",       value: "€1.24M",    sub: "+€48k this month",      icon: <Euro size={16} />,       color: "#f59e0b" },
+    { label: "Active Investors", value: "459",       sub: "+23 this month",         icon: <Users size={16} />,      color: "#60a5fa" },
+    { label: "Energy Today",    value: "6,029 kWh", sub: "847 W/m² avg irradiation", icon: <Zap size={16} />,     color: "#facc15" },
+    { label: "Revenue Today",   value: "€414",      sub: "@ €0.069 / kWh",         icon: <TrendingUp size={16} />, color: "#34d399" },
+  ]
+  return (
+    <div className="p-7">
+      <div className="flex justify-between items-start mb-7">
+        <div><h1 className="text-xl font-bold">Overview</h1><p className="text-gray-500 text-sm mt-0.5">Saturday, March 21 · Live data</p></div>
+        <div className="flex items-center gap-1.5 bg-green-900/30 px-3 py-1.5 rounded-full">
+          <span className="w-1.5 h-1.5 bg-green-400 rounded-full" /><span className="text-green-400 text-xs">All parks operational</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        {kpis.map(k => (
+          <div key={k.label} className="bg-gray-900 rounded-2xl p-4 border border-gray-800/60">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-3" style={{ background: k.color + "20", color: k.color }}>{k.icon}</div>
+            <p className="text-xl font-bold">{k.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{k.label}</p>
+            <p className="text-xs text-gray-700 mt-1">{k.sub}</p>
+          </div>
+        ))}
+      </div>
+      <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800/60 mb-5">
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm font-semibold">Monthly Production & Revenue</p>
+          <div className="flex gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/60 inline-block" />kWh</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500/80 inline-block" />€ Revenue</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={monthlyData} barGap={4}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+            <XAxis dataKey="m" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151", borderRadius: 10, color: "#f9fafb", fontSize: 12 }} />
+            <Bar dataKey="kwh" fill="#f59e0b" opacity={0.6} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="eur" fill="#10b981" opacity={0.8} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bg-gray-900 rounded-2xl border border-gray-800/60 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-800 flex justify-between items-center">
+          <p className="text-sm font-semibold">Parks</p>
+          <button className="text-xs text-amber-400 hover:text-amber-300">+ Add park</button>
+        </div>
+        <table className="w-full">
+          <thead><tr className="text-xs text-gray-600 border-b border-gray-800">{["Park", "Capacity", "Investors", "Today", "Status"].map(h => <th key={h} className="text-left px-5 py-2.5">{h}</th>)}</tr></thead>
+          <tbody>
+            {opParks.map((p, i) => (
+              <tr key={i} className="border-b border-gray-800/40 hover:bg-gray-800/20 last:border-0">
+                <td className="px-5 py-3.5"><p className="text-sm font-medium">{p.name}</p><p className="text-xs text-gray-600 flex items-center gap-0.5 mt-0.5"><MapPin size={9} />{p.loc}</p></td>
+                <td className="px-5 py-3.5 text-sm text-gray-300">{p.cap}</td>
+                <td className="px-5 py-3.5 text-sm text-gray-300">{p.inv || "—"}</td>
+                <td className="px-5 py-3.5"><p className="text-sm text-gray-300">{p.prod}</p><p className="text-xs text-green-400">{p.rev}</p></td>
+                <td className="px-5 py-3.5"><span className={`text-xs px-2.5 py-1 rounded-full ${p.status === "active" ? "bg-green-900/40 text-green-400" : "bg-amber-900/40 text-amber-400"}`}>{p.status === "active" ? "● Active" : "○ Onboarding"}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ParksSection() {
+  return (
+    <div className="p-7">
+      <h1 className="text-xl font-bold mb-5">Parks</h1>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {[{ label: "Total Capacity", value: "7.3 MW" }, { label: "Active Parks", value: "2" }, { label: "Onboarding", value: "1" }].map(k => (
+          <div key={k.label} className="bg-gray-900 rounded-2xl p-4 border border-gray-800/60"><p className="text-gray-500 text-xs mb-1">{k.label}</p><p className="text-2xl font-bold">{k.value}</p></div>
+        ))}
+      </div>
+      {opParks.map((p, i) => (
+        <div key={i} className="bg-gray-900 rounded-2xl p-5 border border-gray-800/60 mb-3">
+          <div className="flex justify-between items-center">
+            <div><p className="font-semibold">{p.name}</p><p className="text-xs text-gray-500 mt-0.5 flex items-center gap-0.5"><MapPin size={10} />{p.loc}</p></div>
+            <span className={`text-xs px-2.5 py-1 rounded-full ${p.status === "active" ? "bg-green-900/40 text-green-400" : "bg-amber-900/40 text-amber-400"}`}>{p.status === "active" ? "● Active" : "○ Onboarding"}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-3 mt-4">
+            {[{ l: "Capacity", v: p.cap }, { l: "Investors", v: p.inv || "—" }, { l: "Today", v: p.prod }, { l: "Revenue", v: p.rev }].map(s => (
+              <div key={s.l} className="bg-gray-800/60 rounded-xl p-3"><p className="text-xs text-gray-500">{s.l}</p><p className="text-sm font-semibold mt-0.5">{s.v}</p></div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function InvestorsSection() {
+  return (
+    <div className="p-7">
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="text-xl font-bold">Investors</h1>
+        <div className="flex gap-2 text-xs">
+          <span className="bg-gray-800 px-3 py-1.5 rounded-lg text-gray-300">Total: 459</span>
+          <span className="bg-gray-800 px-3 py-1.5 rounded-lg text-amber-400">AUM: €1.24M</span>
+        </div>
+      </div>
+      <div className="bg-gray-900 rounded-2xl border border-gray-800/60 overflow-hidden">
+        <table className="w-full">
+          <thead><tr className="text-xs text-gray-600 border-b border-gray-800">{["Investor", "Invested", "Parks", "Yield", "KYC Status"].map(h => <th key={h} className="text-left px-5 py-3">{h}</th>)}</tr></thead>
+          <tbody>
+            {opInvestors.map((inv, i) => (
+              <tr key={i} className="border-b border-gray-800/40 hover:bg-gray-800/20 last:border-0">
+                <td className="px-5 py-3.5"><p className="text-sm font-medium">{inv.name}</p><p className="text-xs text-gray-500">{inv.email}</p></td>
+                <td className="px-5 py-3.5 text-sm font-semibold text-amber-400">{inv.amount}</td>
+                <td className="px-5 py-3.5 text-sm text-gray-300">{inv.parks}</td>
+                <td className="px-5 py-3.5 text-sm text-green-400 font-medium">{inv.yield}</td>
+                <td className="px-5 py-3.5"><span className={`text-xs px-2.5 py-1 rounded-full ${inv.kyc === "verified" ? "bg-green-900/40 text-green-400" : "bg-amber-900/40 text-amber-400"}`}>{inv.kyc === "verified" ? "✓ Verified" : "⏳ Pending"}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function DistributionsSection() {
+  const upcoming = [
+    { park: "Parque Solar Aljarafe",  kwh: "127,400 kWh", total: "€8,790", investors: 312 },
+    { park: "Solar Valencia Norte",   kwh: "55,410 kWh",  total: "€3,823", investors: 147 },
+  ]
+  const history = [
+    { month: "March 2026",    total: "€12,340", investors: 459 },
+    { month: "February 2026", total: "€11,120", investors: 442 },
+    { month: "January 2026",  total: "€9,870",  investors: 431 },
+    { month: "December 2025", total: "€8,420",  investors: 415 },
+  ]
+  return (
+    <div className="p-7">
+      <h1 className="text-xl font-bold mb-5">Distributions</h1>
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Upcoming — April 1, 2026</p>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {upcoming.map((u, i) => (
+          <div key={i} className="bg-gray-900 border border-gray-800/60 rounded-2xl p-4">
+            <p className="font-semibold text-sm mb-3">{u.park}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[{ l: "Production", v: u.kwh }, { l: "Total payout", v: u.total }, { l: "Investors", v: u.investors }].map(s => (
+                <div key={s.l}><p className="text-xs text-gray-500">{s.l}</p><p className="text-sm font-bold mt-0.5">{s.v}</p></div>
+              ))}
+            </div>
+            <button className="mt-4 w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs py-2 rounded-xl transition-colors">Preview Distribution</button>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">History</p>
+      <div className="bg-gray-900 rounded-2xl border border-gray-800/60 overflow-hidden">
+        <table className="w-full">
+          <thead><tr className="text-xs text-gray-600 border-b border-gray-800">{["Month", "Total Distributed", "Investors Paid", "Status"].map(h => <th key={h} className="text-left px-5 py-3">{h}</th>)}</tr></thead>
+          <tbody>
+            {history.map((h, i) => (
+              <tr key={i} className="border-b border-gray-800/40 last:border-0 hover:bg-gray-800/20">
+                <td className="px-5 py-3.5 text-sm font-medium">{h.month}</td>
+                <td className="px-5 py-3.5 text-sm text-green-400 font-semibold">{h.total}</td>
+                <td className="px-5 py-3.5 text-sm text-gray-300">{h.investors}</td>
+                <td className="px-5 py-3.5"><span className="text-xs bg-green-900/40 text-green-400 px-2.5 py-1 rounded-full">✓ Paid</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [view, setView] = useState("investor")
+  return (
+    <div className="min-h-screen bg-black flex flex-col" style={{ fontFamily: "system-ui,-apple-system,sans-serif" }}>
+      <div className="flex-shrink-0 flex justify-center items-center py-4 bg-black border-b border-gray-800/60 gap-4">
+        <div className="flex items-center gap-2"><Sun size={16} className="text-amber-400" /><span className="font-bold text-sm text-white">SolarShare</span></div>
+        <div className="flex bg-gray-900 rounded-xl p-1 gap-1 border border-gray-800">
+          <button onClick={() => setView("investor")}
+            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all ${view === "investor" ? "bg-amber-500 text-black" : "text-gray-400 hover:text-white"}`}>
+            Investor App
+          </button>
+          <button onClick={() => setView("operator")}
+            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all ${view === "operator" ? "bg-amber-500 text-black" : "text-gray-400 hover:text-white"}`}>
+            Operator Dashboard
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto bg-gray-950">
+        {view === "investor" ? (
+          <div className="flex justify-center items-start py-10">
+            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50" style={{ width: 340 }}>
+              <InvestorApp />
+            </div>
+          </div>
+        ) : (
+          <OperatorDashboard />
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+    import { createRoot } from 'react-dom/client';
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
