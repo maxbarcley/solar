@@ -591,7 +591,7 @@ function ModuleIllustration({ panelNumber }) {
 
 function ParkDetailView({ park, onBack }) {
   return (
-    <div className="px-4 pb-24 pt-2">
+    <div className="px-4 pb-24 pt-4 max-w-lg mx-auto w-full">
       <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 text-sm mb-4 hover:text-gray-200 transition-colors">
         <ArrowLeft size={15} /> My Parks
       </button>
@@ -659,24 +659,21 @@ function InvestorApp() {
   const [tab, setTab] = useState("home")
   const [selectedPark, setSelectedPark] = useState(null)
   return (
-    <div className="bg-gray-950 text-white flex flex-col" style={{ height: 720, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div className="flex justify-between items-center px-5 pt-3 pb-1 text-xs text-gray-500 flex-shrink-0">
-        <span>9:41</span><span className="tracking-widest">● ● ●</span>
-      </div>
+    <div className="bg-gray-950 text-white flex flex-col min-h-screen" style={{ fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex-1 overflow-y-auto">
         {tab === "home" && <HomeTab />}
         {tab === "parks" && !selectedPark && <ParksTab onSelectPark={setSelectedPark} />}
         {tab === "parks" && selectedPark && <ParkDetailView park={selectedPark} onBack={() => setSelectedPark(null)} />}
         {tab === "payouts" && <PayoutsTab />}
       </div>
-      <div className="flex-shrink-0 bg-gray-900 border-t border-gray-800 flex justify-around py-2.5 px-6">
+      <div className="flex-shrink-0 bg-gray-900 border-t border-gray-800 flex justify-around py-3 px-6 sticky bottom-0">
         {[
-          { id: "home",    icon: <Home size={19} />,   label: "Portfolio" },
-          { id: "parks",   icon: <Sun size={19} />,    label: "My Parks"  },
-          { id: "payouts", icon: <Wallet size={19} />, label: "Payouts"   },
+          { id: "home",    icon: <Home size={22} />,   label: "Portfolio" },
+          { id: "parks",   icon: <Sun size={22} />,    label: "My Parks"  },
+          { id: "payouts", icon: <Wallet size={22} />, label: "Payouts"   },
         ].map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); if (t.id !== "parks") setSelectedPark(null) }}
-            className={`flex flex-col items-center gap-0.5 text-xs transition-colors ${tab === t.id ? "text-amber-400" : "text-gray-600"}`}>
+            className={`flex flex-col items-center gap-1 text-xs transition-colors ${tab === t.id ? "text-amber-400" : "text-gray-600"}`}>
             {t.icon}<span>{t.label}</span>
           </button>
         ))}
@@ -687,7 +684,7 @@ function InvestorApp() {
 
 function HomeTab() {
   return (
-    <div className="px-4 pb-4 pt-1">
+    <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       {/* Header */}
       <div className="flex justify-between items-center mb-5">
         <div><p className="text-gray-400 text-xs">Good morning,</p><h1 className="text-xl font-bold">Max</h1></div>
@@ -758,7 +755,7 @@ function HomeTab() {
 
 function ParksTab({ onSelectPark }) {
   return (
-    <div className="px-4 pb-4 pt-1">
+    <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       <h1 className="text-xl font-bold mb-1">My Parks</h1>
       <p className="text-xs text-gray-500 mb-4">Tap a park to explore your panels</p>
       {myParks.map(p => (
@@ -803,7 +800,7 @@ function PayoutsTab() {
     { date: "Nov 1, 2025", kwh: "198 kWh", amount: "€13.70" },
   ]
   return (
-    <div className="px-4 pb-4 pt-1">
+    <div className="px-4 pb-4 pt-4 max-w-lg mx-auto w-full">
       <h1 className="text-xl font-bold mb-1">Payouts</h1>
       <p className="text-gray-500 text-xs mb-4">Monthly dividends from your solar parks</p>
       <div className="bg-gray-900 rounded-2xl p-4 mb-5">
@@ -1034,35 +1031,7 @@ function DistributionsSection() {
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 function App() {
-  const [view, setView] = useState("investor")
-  return (
-    <div className="min-h-screen bg-black flex flex-col" style={{ fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div className="flex-shrink-0 flex justify-center items-center py-4 bg-black border-b border-gray-800/60 gap-4">
-        <div className="flex items-center gap-2"><Sun size={16} className="text-amber-400" /><span className="font-bold text-sm text-white">SolarShare</span></div>
-        <div className="flex bg-gray-900 rounded-xl p-1 gap-1 border border-gray-800">
-          <button onClick={() => setView("investor")}
-            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all ${view === "investor" ? "bg-amber-500 text-black" : "text-gray-400 hover:text-white"}`}>
-            Investor App
-          </button>
-          <button onClick={() => setView("operator")}
-            className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all ${view === "operator" ? "bg-amber-500 text-black" : "text-gray-400 hover:text-white"}`}>
-            Operator Dashboard
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-950">
-        {view === "investor" ? (
-          <div className="flex justify-center items-start py-10">
-            <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50" style={{ width: 340 }}>
-              <InvestorApp />
-            </div>
-          </div>
-        ) : (
-          <OperatorDashboard />
-        )}
-      </div>
-    </div>
-  )
+  return <InvestorApp />
 }
 
 
